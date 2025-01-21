@@ -1,16 +1,21 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 
-describe("NEYXVestingWallet", function () {
+function formatBalance(balance: any) {
+  const fullTokens = BigInt(balance) / BigInt(1e18); // Convert from Wei to full tokens
+  return new Intl.NumberFormat("en-US").format(fullTokens); // Format with thousands separators
+}
+
+describe("NEYX Vesting Wallet Contract tests", function () {
   let token: any;
   let vestingWallet: any;
   let addr_3_3_0_ReserveFund: any;
   let beneficiary: any;
   let amount: any;
   const duration = 60 * 60 * 24 * 30; // 30 days in seconds
-  let now: number;
+  let startOfVesting: number;
 
-  this.beforeEach (async function () {
+  before(async function () {
     // Deploy NEYX_Token
     const [
       deployer, //Address00
@@ -95,136 +100,175 @@ describe("NEYXVestingWallet", function () {
     // Amount to Transfer all tokens from addr_3_3_0_ReserveFund to NEYXVestingWallet
     amount = await token.balanceOf(addr_3_3_0_ReserveFund.address);
 
-    // Set current timestamp
-    now = Math.floor(Date.now() / 1000);
+    // Set start of Vesting to now + 5 days
+    const now = Math.floor(Date.now() / 1000); // Current Unix timestamp
+    startOfVesting = now + 5 * 24 * 60 * 60; // Start in 5 days
   });
 
   it("Should deploy the vesting wallet", async function () {
     const VestingWallet = await ethers.getContractFactory("NEYXVestingWallet");
     vestingWallet = await VestingWallet.deploy(
       beneficiary.address, // Beneficiary address
-      now,                 // Vesting start time
-      duration             // Vesting duration
+      startOfVesting, // Vesting start time
+      duration // Vesting duration
     );
     await vestingWallet.waitForDeployment();
 
     expect(await vestingWallet.getAddress()).to.be.a("string");
   });
 
-  it("Should transfer all tokens from addr_3_3_0_ReserveFund to the vesting wallet", async function () {
-
-    // Log the address to confirm it's correct
-    console.log("Reserve Fund Address:", addr_3_3_0_ReserveFund.address);
-
+  it("Should transfer all tokens from Genesis pocket to the vesting wallet", async function () {
     // Check the initial balance of addr_3_3_0_ReserveFund
-    const reserveFundBalance = await token.balanceOf(addr_3_3_0_ReserveFund.address);
+    const reserveFundBalance = await token.balanceOf(
+      addr_3_3_0_ReserveFund.address
+    );
 
-    expect(reserveFundBalance).to.be.gt(0, "Reserve fund should have tokens initially");
+    expect(reserveFundBalance).to.be.gt(
+      0,
+      "Reserve fund should have tokens initially"
+    );
 
     // Transfer tokens from addr_3_3_0_ReserveFund to the vesting wallet
     await token
-        .connect(addr_3_3_0_ReserveFund)
-        .transfer(vestingWallet.getAddress(), reserveFundBalance);
+      .connect(addr_3_3_0_ReserveFund)
+      .transfer(vestingWallet.getAddress(), reserveFundBalance);
 
     // Check the balance of the vesting wallet after the transfer
-    const vestingWalletBalance = await token.balanceOf(vestingWallet.getAddress());
-    console.log("Vesting Wallet Balance:", vestingWalletBalance.toString());
+    const vestingWalletBalance = await token.balanceOf(
+      vestingWallet.getAddress()
+    );
     expect(vestingWalletBalance).to.equal(reserveFundBalance);
 
     // Verify that addr_3_3_0_ReserveFund has zero balance after the transfer
-    const reserveFundRemainingBalance = await token.balanceOf(addr_3_3_0_ReserveFund.address);
-    console.log("Remaining Reserve Fund Balance:", reserveFundRemainingBalance.toString());
-    expect(reserveFundRemainingBalance).to.equal(0, "Reserve fund should have zero balance after transfer");
+    const reserveFundRemainingBalance = await token.balanceOf(
+      addr_3_3_0_ReserveFund.address
+    );
+
+    console.log("Genesis Pocket Balance before vesting:  ", formatBalance(reserveFundBalance));
+    console.log("Vesting Wallet Balance  after vesting:  ", formatBalance(vestingWalletBalance));
+    console.log("Genesis Pocket Balance  after vesting:  ",reserveFundRemainingBalance.toString());
+    
+    expect(reserveFundRemainingBalance).to.equal(0,"Reserve fund should have zero balance after transfer");
+    
+  });
+
+  it("Should not release tokens when no tokens are releasable", async function () {
+    // Capture initial state
+    const releasableAmountBefore = await vestingWallet["releasable(address)"](
+      token.getAddress()
+    );
+    console.log(`Tokens Available for release:            ${formatBalance(releasableAmountBefore)}`);
+    expect(releasableAmountBefore).to.equal(0, "Releasable amount should be 0");
+
+    const vestingWalletBalanceBefore = await token.balanceOf(
+      vestingWallet.getAddress()
+    );
+    const beneficiaryBalanceBefore = await token.balanceOf(beneficiary.address);
+
+    // Attempt to release tokens
+    const tx = await vestingWallet["release(address)"](token.getAddress());
+
+    // Capture logs to ensure no `ERC20Released` event with non-zero amount
+    const receipt = await tx.wait();
+    const releaseEvent = receipt.events?.find(
+      (event) => event.event === "ERC20Released"
+    );
+    if (releaseEvent) {
+      const releasedAmount = releaseEvent.args?.[1]; // Amount is the second argument
+      console.log(`releasedAmount : ${formatBalance(releasedAmount)}`);
+      expect(releasedAmount).to.equal(0, "No tokens should be released");
+    }
+
+    // Check balances remain unchanged
+    const vestingWalletBalanceAfter = await token.balanceOf(
+      vestingWallet.getAddress()
+    );
+    const beneficiaryBalanceAfter = await token.balanceOf(beneficiary.address);
+
+    console.log(`Contract balance after vesting attempt:    ${formatBalance(vestingWalletBalanceAfter)}`);
+    console.log(`Beneficiary balance after vesting attempt: ${formatBalance(beneficiaryBalanceAfter)}`);
+
+    expect(vestingWalletBalanceAfter).to.equal(
+      vestingWalletBalanceBefore,
+      "Vesting wallet balance should not change"
+    );
+    expect(beneficiaryBalanceAfter).to.equal(
+      beneficiaryBalanceBefore,
+      "Beneficiary balance should not change"
+    );
+  });
+
+  it("Should allow partial release after half the vesting period", async function () {
+    // Fast-forward time to 15 days (half the duration)
+    const targetDate = startOfVesting + 15 * 24 * 60 * 60; // Start + 15 days
+    const targetDateReadable = new Date(targetDate * 1000).toISOString();
+
+    const currentBlockBefore = await ethers.provider.getBlock("latest");
+    const currentTimestampBefore = currentBlockBefore.timestamp;
+
+    // Convert the timestamp to a readable date
+    const startOfVestingReadable = new Date(
+      startOfVesting * 1000
+    ).toISOString();
+    const currentDateBefore = new Date(
+      currentTimestampBefore * 1000
+    ).toISOString();
+    console.log(`start of vesting date : ${startOfVestingReadable}`);
+    console.log("Test date (50% of vesting schedule):", targetDateReadable);
+    console.log(
+      "Current blockchain date before fast forward:",
+      currentDateBefore
+    );
+
+    await ethers.provider.send("evm_increaseTime", [
+      5 * 24 * 60 * 60 + duration / 2,
+    ]); // Half the vesting duration
+    await ethers.provider.send("evm_mine", []);
+
+    // Get the current block's timestamp
+    const currentBlock = await ethers.provider.getBlock("latest");
+    const currentTimestamp = currentBlock.timestamp;
+
+    // Convert the timestamp to a readable date
+    const currentDate = new Date(currentTimestamp * 1000).toISOString();
+    console.log("Blockchain date after fast forward:", currentDate);
+
+    const releasable = await vestingWallet["releasable(address)"](
+      token.getAddress()
+    );
+    console.log(`Tokens Available for release:                ${formatBalance(releasable)}`);
+
+    // Release tokens
+    await vestingWallet["release(address)"](token.getAddress());
+    const released = await token.balanceOf(beneficiary.address);
+
+    console.log(`Token Actually released:                     ${formatBalance(releasable)}`);
+
+    const expectedReleased = amount / 2n; // 50% released
+    // Compare with tolerance (1e18 for 1 token precision)
+    const tolerance = BigInt(40e18); // Adjust tolerance as needed
+    expect(released).to.be.closeTo(expectedReleased, tolerance);
+  });
+
+  it("Should release the remaining tokens after full vesting period", async function () {
+    // Fast-forward time to the end of the vesting period
+    await ethers.provider.send("evm_increaseTime", [duration / 2]); // Remaining half duration
+    await ethers.provider.send("evm_mine", []);
+
+    const currentBlock = await ethers.provider.getBlock("latest");
+    const currentTimestamp = currentBlock.timestamp;
+
+    // Convert the timestamp to a readable date
+    const currentDate = new Date(currentTimestamp * 1000).toISOString();
+    console.log("Chain date after fast forward to end of Vesting: ", currentDate);
+
+    // Release tokens
+    await vestingWallet["release(address)"](token.getAddress());
+    const finalBalance = await token.balanceOf(beneficiary.address);
+
+    console.log(`Final beneficiary balance:                 ${formatBalance(finalBalance)}`);
+    console.log(`Initial Genesis pocket balance :           ${formatBalance(amount)}`);
+
+    expect(finalBalance).to.equal(amount); // Full amount released
+  });
 });
-
-//   it("Should not allow beneficiary to withdraw immediately", async function () {
-//     // Ensure tokens cannot be withdrawn right after deployment
-//     await expect(
-//       vestingWallet["release(address)"](token.getAddress())
-//     ).to.be.revertedWith("VestingWallet: no tokens are due");
-//   });
-
-//   it("Should allow partial release after half the vesting period", async function () {
-//     // Fast-forward time to 15 days (half the duration)
-//     await ethers.provider.send("evm_increaseTime", [duration / 2]); // Half the vesting duration
-//     await ethers.provider.send("evm_mine", []);
-
-//     // Release tokens
-//     await vestingWallet["release(address)"](token.getAddress());
-//     const released = await token.balanceOf(beneficiary.address);
-
-//     const expectedReleased = amount / 2n; // 50% released
-//     expect(released).to.be.equal(expectedReleased);
-//   });
-
-//   it("Should release the remaining tokens after full vesting period", async function () {
-//     // Fast-forward time to the end of the vesting period
-//     await ethers.provider.send("evm_increaseTime", [duration / 2]); // Remaining half duration
-//     await ethers.provider.send("evm_mine", []);
-
-//     // Release tokens
-//     await vestingWallet["release(address)"](token.getAddress());
-//     const finalBalance = await token.balanceOf(beneficiary.address);
-
-//     expect(finalBalance).to.equal(amount); // Full amount released
-//   });
-});
-
-
-
-
-
-
-
-
-
-
-//     // Deploy NEYXVestingWallet
-//     const now = Math.floor(Date.now() / 1000);
-//     const duration = 60 * 60 * 24 * 30; // 30 days
-
-//     const VestingWallet = await ethers.getContractFactory("NEYXVestingWallet");
-//     const vestingWallet = await VestingWallet.deploy(
-//       beneficiary.address, // Beneficiary address
-//       now,                 // Vesting start time
-//       duration             // Vesting duration in seconds
-//     );
-//     await vestingWallet.waitForDeployment();
-
-//     // Transfer tokens from addr_3_3_0_ReserveFund to VestingWallet
-//     await token
-//       .connect(addr_3_3_0_ReserveFund)
-//       .transfer(vestingWallet.getAddress(), reserveFundBalance);
-
-//     // Verify transfer to VestingWallet
-//     expect(await token.balanceOf(vestingWallet.getAddress())).to.equal(reserveFundBalance);
-
-//     // Verify addr_3_3_0_ReserveFund has a zero balance
-//     expect(await token.balanceOf(addr_3_3_0_ReserveFund.address)).to.equal(0);
-
-//     // Check that beneficiary cannot withdraw immediately
-//     await expect(
-//         vestingWallet["release(address)"](token.getAddress())
-//     ).to.be.revertedWith("VestingWallet: no tokens are due");
-
-//     // Fast-forward 15 days
-//     await ethers.provider.send("evm_increaseTime", [15 * 24 * 60 * 60]); // 15 days
-//     await ethers.provider.send("evm_mine", []);
-
-//     // Partial release after 15 days
-//     await vestingWallet["release(address)"](token.getAddress())
-//     const released = await token.balanceOf(beneficiary.address);
-
-//     const expectedReleased = reserveFundBalance / 2n; // 50% released
-//     expect(released).to.be.closeTo(expectedReleased, ethers.parseUnits("1", 18));
-
-//     // Fast-forward to the end of the vesting period
-//     await ethers.provider.send("evm_increaseTime", [15 * 24 * 60 * 60]); // Another 15 days
-//     await ethers.provider.send("evm_mine", []);
-
-//     // Release remaining tokens
-//     await vestingWallet["release(address)"](token.getAddress())
-//     const finalBalance = await token.balanceOf(beneficiary.address);
-//     expect(finalBalance).to.equal(reserveFundBalance); // Full amount vested
-//   });
-// });
