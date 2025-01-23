@@ -255,6 +255,7 @@ describe("NEYX Vesting Wallet Contract tests", function () {
     await ethers.provider.send("evm_increaseTime", [duration / 2]); // Remaining half duration
     await ethers.provider.send("evm_mine", []);
 
+    console.log('');
     const currentBlock = await ethers.provider.getBlock("latest");
     const currentTimestamp = currentBlock.timestamp;
 
