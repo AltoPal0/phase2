@@ -171,7 +171,7 @@ describe("NEYX Vesting Wallet Contract tests", function () {
     // Capture logs to ensure no `ERC20Released` event with non-zero amount
     const receipt = await tx.wait();
     const releaseEvent = receipt.events?.find(
-      (event) => event.event === "ERC20Released"
+      (event: { event: string; }) => event.event === "ERC20Released"
     );
     if (releaseEvent) {
       const releasedAmount = releaseEvent.args?.[1]; // Amount is the second argument
@@ -204,6 +204,9 @@ describe("NEYX Vesting Wallet Contract tests", function () {
     const targetDateReadable = new Date(targetDate * 1000).toISOString();
 
     const currentBlockBefore = await ethers.provider.getBlock("latest");
+    if (!currentBlockBefore) {
+      throw new Error("Failed to fetch the latest block.");
+    }
     const currentTimestampBefore = currentBlockBefore.timestamp;
 
     // Convert the timestamp to a readable date
@@ -227,6 +230,10 @@ describe("NEYX Vesting Wallet Contract tests", function () {
 
     // Get the current block's timestamp
     const currentBlock = await ethers.provider.getBlock("latest");
+    if (!currentBlock) {
+      throw new Error("Failed to fetch the latest block.");
+    }
+    currentBlockBefore
     const currentTimestamp = currentBlock.timestamp;
 
     // Convert the timestamp to a readable date
@@ -257,6 +264,9 @@ describe("NEYX Vesting Wallet Contract tests", function () {
 
     console.log('');
     const currentBlock = await ethers.provider.getBlock("latest");
+    if (!currentBlock) {
+      throw new Error("Failed to fetch the latest block.");
+    }
     const currentTimestamp = currentBlock.timestamp;
 
     // Convert the timestamp to a readable date
