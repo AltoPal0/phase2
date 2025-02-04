@@ -3,10 +3,10 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  // Last deployment : 0xAf4fa52Ec7B6d9288E7aF214a3b6a98e28B923A4
+  // Last deployment : 0xA0e06993446D0FA0c4f81FE455Fb0D19321506bA
   
   // Parameters for the vesting wallet
-  const beneficiaryAddress = "0x08dFDa43E716651b320869B7a95447C75F564175"; // EthDev3
+  const beneficiaryAddress = "0xc661BCE4388257014AD805aA1f7eDe87FeEaa6C9"; // EthDev4
   const startTimestamp = Math.floor(new Date("2025-02-06T00:00:00Z").getTime() / 1000); 
   const durationSeconds = 14 * 24 * 60 * 60; // 2 week in seconds
 
@@ -19,6 +19,7 @@ async function main() {
   await vestingWallet.waitForDeployment();
   const vestingWalletAddress = await vestingWallet.getAddress();
   console.log(`NEYXVestingWallet deployed to: ${vestingWalletAddress} with Beneficiary ${beneficiaryAddress}`);
+  console.log(`Vesting contract owner : ${vestingWallet.owner()}`)
 }
 
 // Execute the script
