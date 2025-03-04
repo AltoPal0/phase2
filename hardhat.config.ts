@@ -19,8 +19,8 @@ const config: HardhatUserConfig = {
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     // ✅ Polygon Mumbai (Testnet)
-    polygon_mumbai: {
-      url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    polygon_amoy: {
+      url: `https://polygon-amoy.infura.io/v3/${process.env.INFURA_API_KEY}`,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     // ✅ Polygon Mainnet
@@ -33,7 +33,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       sepolia: process.env.ETHERSCAN_API_KEY_SEPOLIA || "", // ✅ Sepolia
       mainnet: process.env.ETHERSCAN_API_KEY_MAINNET || "", // ✅ Ethereum Mainnet
-      polygonMumbai: process.env.POLYGONSCAN_API_KEY_MUMBAI || "", // ✅ Polygon Mumbai
+      polygonAmoy: process.env.POLYGONSCAN_API_KEY_AMOY || "", // ✅ Polygon Mumbai
       polygon: process.env.POLYGONSCAN_API_KEY_MAINNET || "", // ✅ Polygon Mainnet
     },
   },
