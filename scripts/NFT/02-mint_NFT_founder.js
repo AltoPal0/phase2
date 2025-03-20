@@ -1,11 +1,17 @@
 const hre = require("hardhat");
 
 async function main() {
-    const contractAddress = "0x5f200aB4e1aCa5cDABDA06dD8079f2EB63Dd01b4";
-    // const recipient = "0x1ECbD10b7F3e2c041eb36FA5Cf8F7Fde293AE56f"; // Morgann #001
-    // const recipient = "0x25bCfa3253f7d725D648DDe603D77ca6248C3bf5"; // Steph #002
-    const recipient = "0x89259C7848da9f9fFE60Fe02c51749A753b19337"; // Karim #003
-    const tokenId = 3; // ✅ Manually set the Token ID here
+    // PRODUCTION
+    // const contractAddress = "0x5f200aB4e1aCa5cDABDA06dD8079f2EB63Dd01b4";
+    // // const recipient = "0x1ECbD10b7F3e2c041eb36FA5Cf8F7Fde293AE56f"; // Morgann #001
+    // // const recipient = "0x25bCfa3253f7d725D648DDe603D77ca6248C3bf5"; // Steph #002
+    // const recipient = "0x89259C7848da9f9fFE60Fe02c51749A753b19337"; // Karim #003
+    // const tokenId = 3; // ✅ Manually set the Token ID here
+
+    // DEV
+    const contractAddress = "0x19fB0271e0F0380645b15C409e43e92F8774b5F1";
+    const recipient = "0x637246DBFc706caD0E8A59838Dc1dc3A39f618Ef"; // Steph Gmail
+    const tokenId = 1; // ✅ Manually set the Token ID here
 
     // Connect to contract
     const WFoundersNFT = await hre.ethers.getContractFactory("WFoundersNFT");

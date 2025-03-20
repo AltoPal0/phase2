@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // Last runs
-// 0x19fB0271e0F0380645b15C409e43e92F8774b5F1 -- Removed soulbound
+// 0x19fB0271e0F0380645b15C409e43e92F8774b5F1 AMOY -- Removed soulbound
 
 contract WFoundersNFT is ERC721, ERC721Burnable, Ownable {
     uint256 public constant MAX_SUPPLY = 1000;
