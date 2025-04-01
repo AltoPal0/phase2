@@ -7,6 +7,9 @@ const hre = require("hardhat");
 // 0xB066f1a3354Fc646040EEC8732539e091eF3d8Ef - Amoy
 // 0x86b8B002ff72Be60C63E9Ae716348EDC1771F52e - Polygon Mainnet
 // 0x5f200aB4e1aCa5cDABDA06dD8079f2EB63Dd01b4 - Polygon Mainnet
+// 0x565C1EC76d5EC7B3E41E49eC57e9dBc05E37C9Cf - Amoy latest
+
+// 0x62b523fd927d5390F7DBA1c61F93696BDe1916f8 - Polygon Mainnet V01 <<<<
 
 async function main() {
     // Define the base URI pointing to your metadata API
