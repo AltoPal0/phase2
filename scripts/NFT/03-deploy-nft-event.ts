@@ -2,6 +2,8 @@ import { ethers } from "hardhat";
 
 // Deployed to : 0x7F76dE0EA12d38624EEC701009a5575Cb111fC92 (AMOY)
 
+const NEYXT_Address = "0x5911FF908512f9CAC1FC8727dDBfca208F164814";
+
 async function main() {
   const [deployer] = await ethers.getSigners();
 
@@ -20,7 +22,7 @@ async function main() {
 
   const NFT = await ethers.getContractFactory("ClaimableNFT");
   const nft = await NFT.deploy(
-    "0x5911FF908512f9CAC1FC8727dDBfca208F164814", // Latest AMOY
+    NEYXT_Address, // Latest AMOY
     deployer.address,
     ethers.parseUnits("1000", 18),
     deployer.address
