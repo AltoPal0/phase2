@@ -10,8 +10,8 @@ async function main() {
 
     // DEV
     const contractAddress = "0x19fB0271e0F0380645b15C409e43e92F8774b5F1";
-    const recipient = "0x21988613F5878448F9cC2118515457D6F3171a3c"; // Steph Apple
-    const tokenId = 66; // ✅ Manually set the Token ID here
+    const recipient = "0xe991a6d4C2A09f2Dc98E64615c3809429558F220"; // Steph Apple
+    const tokenId = 68; // ✅ Manually set the Token ID here
 
     // Connect to contract
     const WFoundersNFT = await hre.ethers.getContractFactory("WFoundersNFT");
