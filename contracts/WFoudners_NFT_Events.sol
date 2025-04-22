@@ -1,5 +1,5 @@
-// Deployed to : 0x7F76dE0EA12d38624EEC701009a5575Cb111fC92 (AMOY)
-// Deployed to : 0xC5080145DdF272716046d30fa685edfa66eFeE9d (POLYGON MAINNET)
+// Deployed to 0xa0b75C0b97bdDE0abDF17F9D9FF6D55A3F8CA7F5 (POLYGON AMOY)
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -8,17 +8,29 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
+/**
+ * One‑contract / many‑events NFT collection.
+ * tokenId encoding:  tokenId = (eventId << 64) | attendeeIndex (starting at 1)
+ * ‑  eventId:   any uint64 chosen by the organiser (e.g. YYYYMMDD)
+ * ‑  attendeeIndex: incremental counter per event
+ * Each attendee pays in NEYXT; contract (or relayer) covers POL gas.
+ */
 contract ClaimableNFT is ERC721URIStorage, Ownable {
     using MessageHashUtils for bytes32;
 
-    IERC20 public wnext;
-    address public treasury;
-    uint256 public nftPrice; // in WNEXT
-    uint256 public tokenIdCounter;
-    mapping(address => uint256) public nonces;
-    mapping(uint256 => mapping(address => bool)) public hasClaimed; // eventId => user => claimed
+    /* ───── immutable settings ─────────────────────────── */
+    IERC20  public wnext;          // NEYXT on Polygon (wrapped)
+    address public treasury;       // NEYXT fee receiver
+    uint256 public nftPrice;       // price in NEYXT (18 dec)
 
+    /* ───── per‑user / per‑event state ─────────────────── */
+    mapping(address => uint256) public nonces;                          // EIP‑191 replay protection
+    mapping(uint256 => uint256) private _eventCounters;                 // eventId  → next attendee idx
+    mapping(uint256 => mapping(address => bool)) private _claimed;      // eventId  → user → claimed?
+
+    /* ───── constructor ────────────────────────────────── */
     constructor(
         address wnextToken,
         address treasuryAddress,
@@ -26,53 +38,57 @@ contract ClaimableNFT is ERC721URIStorage, Ownable {
         address initialOwner
     )
         ERC721("ClubClaimNFT", "CLUB")
-        Ownable(initialOwner) // <- pass the owner explicitly
+        Ownable(initialOwner)
     {
-        wnext = IERC20(wnextToken);
+        wnext    = IERC20(wnextToken);
         treasury = treasuryAddress;
         nftPrice = mintPrice;
     }
 
+    /* ───── public mint (gasless via relayer) ──────────── */
     function claimNFTWithSig(
-        address user,
-        string calldata tokenURI,
-        uint256 deadline,
-        uint256 eventId,
-        bytes calldata signature
+        address   user,
+        string   calldata tokenURI_,
+        uint256   deadline,
+        uint256   eventId,
+        bytes    calldata signature
     ) external {
         require(block.timestamp <= deadline, "Signature expired");
-        require(!hasClaimed[eventId][user], "Already claimed for this event");
+        require(!_claimed[eventId][user],     "Already claimed for this event");
 
+        /* ── 1. verify off‑chain signature ─────────────── */
         bytes32 rawHash = keccak256(
-            abi.encodePacked(user, tokenURI, deadline, eventId, nonces[user])
+            abi.encodePacked(user, tokenURI_, deadline, eventId, nonces[user])
         );
-        bytes32 messageHash = rawHash.toEthSignedMessageHash();
-        address signer = ECDSA.recover(messageHash, signature);
+        address signer = ECDSA.recover(rawHash.toEthSignedMessageHash(), signature);
         require(signer == user, "Invalid signature");
 
-        require(wnext.transferFrom(user, treasury, nftPrice), "WNEXT payment failed");
+        /* ── 2. pull NEYXT fee ─────────────────────────── */
+        require(
+            wnext.transferFrom(user, treasury, nftPrice),
+            "NEYXT payment failed"
+        );
 
-        uint256 newTokenId = ++tokenIdCounter;
-        _mint(user, newTokenId);
-        _setTokenURI(newTokenId, tokenURI);
+        /* ── 3. mint unique token for this event/user ──── */
+        uint256 attendeeIdx   = ++_eventCounters[eventId];          // starts at 1
+        uint256 tokenId       = (eventId << 64) | attendeeIdx;      // composite ID
+        _safeMint(user, tokenId);
+        _setTokenURI(tokenId, tokenURI_);                           // keep fully‑custom metadata
 
-        hasClaimed[eventId][user] = true;
-        nonces[user] += 1;
+        _claimed[eventId][user] = true;
+        nonces[user]           += 1;
     }
 
-    function updatePrice(uint256 _newPrice) external onlyOwner {
-        nftPrice = _newPrice;
+    /* ───── admin helpers ─────────────────────────────── */
+    function updatePrice(uint256 newPrice) external onlyOwner {
+        nftPrice = newPrice;
     }
 
-    function updateTreasury(address _newTreasury) external onlyOwner {
-        treasury = _newTreasury;
+    function updateTreasury(address newTreasury) external onlyOwner {
+        treasury = newTreasury;
     }
 
-    receive() external payable {
-        revert("This contract does not accept POL");
-    }
-
-    fallback() external payable {
-        revert("This contract does not accept POL");
-    }
+    /* ───── reject accidental POL/MATIC ───────────────── */
+    receive() external payable { revert("No POL accepted"); }
+    fallback() external payable { revert("No POL accepted"); }
 }

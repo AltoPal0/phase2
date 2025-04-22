@@ -20,6 +20,10 @@ async function main() {
 //   await neyxt.waitForDeployment();
 //   console.log("NEYXT deployed to:", await neyxt.getAddress());
 
+// ✅ Expected tokenURI format (used at mint time via backend):
+// Example: "https://your-backend.com/api/dev/claim/metadata.json?uri=20250401001"
+//          where "20250401" = date, "001" = organizer ID
+
   const NFT = await ethers.getContractFactory("ClaimableNFT");
   const nft = await NFT.deploy(
     NEYXT_Address, // Latest AMOY
