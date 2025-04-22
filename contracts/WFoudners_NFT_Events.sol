@@ -1,3 +1,5 @@
+// Deployed to : 0x7F76dE0EA12d38624EEC701009a5575Cb111fC92 (AMOY)
+// Deployed to : 0xC5080145DdF272716046d30fa685edfa66eFeE9d (POLYGON MAINNET)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -6,8 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
-// Deployed to : 0x7F76dE0EA12d38624EEC701009a5575Cb111fC92 (AMOY)
 
 contract ClaimableNFT is ERC721URIStorage, Ownable {
     using MessageHashUtils for bytes32;
