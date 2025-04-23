@@ -4,6 +4,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -17,7 +18,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  * ‑  attendeeIndex: incremental counter per event
  * Each attendee pays in NEYXT; contract (or relayer) covers POL gas.
  */
-contract ClaimableNFT is ERC721URIStorage, Ownable {
+contract ClaimableNFT is ERC721URIStorage, ERC721Enumerable, Ownable {
     using MessageHashUtils for bytes32;
 
     /* ───── immutable settings ─────────────────────────── */
@@ -91,4 +92,48 @@ contract ClaimableNFT is ERC721URIStorage, Ownable {
     /* ───── reject accidental POL/MATIC ───────────────── */
     receive() external payable { revert("No POL accepted"); }
     fallback() external payable { revert("No POL accepted"); }
+
+    /* ───── Required Overrides ────────────────────────── */
+
+   // ───── Required Overrides (OpenZeppelin v5.x) ─────
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Enumerable, ERC721URIStorage)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    // function _burn(uint256 tokenId)
+    //     internal
+    //     override(ERC721, ERC721URIStorage)
+    // {
+    //     super._burn(tokenId);
+    // }
+
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override(ERC721, ERC721Enumerable)
+        returns (address)
+    {
+        return super._update(to, tokenId, auth);
+    }
+
+    function _increaseBalance(address account, uint128 value)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
+        super._increaseBalance(account, value);
+    }
 }
