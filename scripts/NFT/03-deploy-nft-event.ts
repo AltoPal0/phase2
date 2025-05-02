@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-// Deployed to : 0x7F76dE0EA12d38624EEC701009a5575Cb111fC92 (AMOY)
+// Deployed to : 0x2F0B50dF9E7B8B2bf4b46ccFd8d67431349Bc8c9 (AMOY)
 
 const NEYXT_Address = "0x5911FF908512f9CAC1FC8727dDBfca208F164814";
 

@@ -1,7 +1,7 @@
 // Things to do for deployment
 // MANUALLY
-// Bridge NEYXT to polygon
-// Get bridged NEYXT contract address
+// Bridge NEYXT to polygon ✅
+// Get bridged NEYXT contract address ✅
 // fill it in in env files
 
 // deploy NFT event ✅
