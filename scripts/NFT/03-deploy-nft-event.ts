@@ -1,41 +1,44 @@
 import { ethers } from "hardhat";
+import readline from "readline";
 
-// Deployed to : 0x2F0B50dF9E7B8B2bf4b46ccFd8d67431349Bc8c9 (AMOY)
-
-const NEYXT_Address = "0x5911FF908512f9CAC1FC8727dDBfca208F164814";
+// Simple helper to prompt user for input
+function askQuestion(query: string): Promise<string> {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+    return new Promise((resolve) => rl.question(query, ans => {
+        rl.close();
+        resolve(ans);
+    }))
+}
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+    const [deployer] = await ethers.getSigners();
 
-  console.log("Deploying contracts with:", deployer.address);
+    console.log("Deploying contracts with:", deployer.address);
 
-//   const totalSupply = ethers.parseUnits("1000000000", 18);
+    // ✅ Prompt the user for the NEYXT token address
+    const neyxtAddress = (await askQuestion("Enter the NEYXT token address (e.g., 0x...): ")).trim();
 
-//   const NEYXT = await ethers.getContractFactory("NEYX_Token");
-//   const neyxt = await NEYXT.deploy(
-//     deployer.address,
-//     [deployer.address],
-//     [totalSupply]
-//   );
-//   await neyxt.waitForDeployment();
-//   console.log("NEYXT deployed to:", await neyxt.getAddress());
+    if (!ethers.isAddress(neyxtAddress)) {
+        throw new Error("Invalid NEYXT address provided.");
+    }
 
-// ✅ Expected tokenURI format (used at mint time via backend):
-// Example: "https://your-backend.com/api/dev/claim/metadata.json?uri=20250401001"
-//          where "20250401" = date, "001" = organizer ID
+    const nftPrice = ethers.parseUnits("1000", 18);
 
-  const NFT = await ethers.getContractFactory("ClaimableNFT");
-  const nft = await NFT.deploy(
-    NEYXT_Address, // Latest AMOY
-    deployer.address,
-    ethers.parseUnits("1000", 18),
-    deployer.address
-  );
-  await nft.waitForDeployment();
-  console.log("NFT deployed to:", await nft.getAddress());
+    const NFT = await ethers.getContractFactory("ClaimableNFT");
+    const nft = await NFT.deploy(
+        neyxtAddress,
+        deployer.address,
+        nftPrice,
+        deployer.address
+    );
+    await nft.waitForDeployment();
+    console.log("✅ NFT deployed to:", await nft.getAddress());
 }
 
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+    console.error(error);
+    process.exitCode = 1;
 });

@@ -13,7 +13,7 @@ const WNEYXT_ADDRESSES: Record<string, string> = {
 };
 
 const recipients: { address: string; amount: string }[] = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "recipients.json"), "utf8")
+  fs.readFileSync(path.join(__dirname, "WNEYXT_recipients.json"), "utf8")
 );
 
 const ERC20_ABI = [

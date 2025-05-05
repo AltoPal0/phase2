@@ -1,4 +1,5 @@
-// Deployed to 0x2F0B50dF9E7B8B2bf4b46ccFd8d67431349Bc8c9 (POLYGON AMOY)
+// Deployed to 0x09E0a60f12a83ab98Eb9e9CB620bb92D19e4DFAb (POLYGON AMOY)
+// Deployed to 0xf55eb9Eeb340d047AE1373c963fF2370a12a1e86 (POLYGON MAINNET)
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
@@ -121,6 +122,10 @@ contract ClaimableNFT is ERC721URIStorage, ERC721Enumerable, Ownable {
     // {
     //     super._burn(tokenId);
     // }
+
+    function hasClaimed(uint256 eventId, address user) public view returns (bool) {
+        return _claimed[eventId][user];
+    }
 
     function _update(address to, uint256 tokenId, address auth)
         internal
